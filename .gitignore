@@ -14,6 +14,7 @@ venv/
 env/
 .idea/
 .vscode/
+.offline-markdown-preview/
 *.code-workspace
 
 # Data and generated metadata

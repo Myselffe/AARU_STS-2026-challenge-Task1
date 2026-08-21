@@ -28,22 +28,19 @@ The reported score and rank refer only to the submitted system described in the 
 
 ## Method overview
 
-```mermaid
-flowchart LR
-    A[Raw CBCT] --> B[Resampling and robust normalization]
-    B --> C1[Normalized CBCT]
-    B --> C2[Artifact-suppressed view]
-    B --> C3[High-density proxy]
-    C1 --> D[Three-channel AARU-Net input]
-    C2 --> D
-    C3 --> D
-    D --> E[Corruption-based pretraining]
-    E --> F[EMA teacher-student training]
-    F --> G1[65-class segmentation]
-    F --> G2[Boundary and restoration heads]
-    G1 --> H[Memory-efficient sliding-window inference]
-    H --> I[Tooth and pulp NIfTI mask]
-```
+<p align="center">
+  <img src="assets/overall_framework.png" alt="Overall framework of ArtifactAware-SSL and AARU-Net" width="100%">
+</p>
+
+<p align="center"><em>Overall framework of ArtifactAware-SSL. A vector version is available in <a href="overall_framework.pdf">overall_framework.pdf</a>.</em></p>
+
+The framework is organized into three stages:
+
+1. **Artifact-aware preprocessing (a).** Each raw CBCT volume is resampled and normalized. A high-density proxy mask is extracted to indicate potential metal or other dense materials. The proxy is an image-derived cue rather than a metal annotation.
+2. **Corruption-based self-supervised pretraining (b).** AARU-Net receives patches degraded by one of three controlled corruption families: metal-like artifacts, cube masking, or low-resolution degradation. The reconstruction branch learns to recover the original observed patch with extra emphasis on corrupted and high-density regions. This stage uses all available training scans without voxel-wise labels.
+3. **EMA teacher-student segmentation (c).** Labeled patches undergo strong augmentation and supervise the student's final segmentation, auxiliary segmentation, and recovery outputs. For unlabeled patches, the EMA teacher predicts a weak view and supplies confidence-filtered pseudo-labels, while the student processes a strongly perturbed view. Feature perturbation is applied at the two deepest encoder levels to improve robustness.
+
+The figure depicts the paper submission. As summarized above, the current repository default extends its input with an artifact-suppressed view and adds structure-aware objectives while retaining the same preprocessing, pretraining, and teacher-student organization.
 
 The implementation contains the following main components:
 
@@ -60,6 +57,7 @@ The implementation contains the following main components:
 
 ```text
 .
+|-- assets/                  # README figures
 |-- cbct_ssl/                 # Model, data, losses, training, inference, and metrics
 |-- configs/default.yaml      # Default experiment configuration
 |-- scripts/
@@ -71,6 +69,7 @@ The implementation contains the following main components:
 |   |-- evaluate_official.py  # Challenge-style weighted evaluation
 |   `-- prepare_submit.py     # Prediction validation and ZIP packaging
 |-- tests/test_core.py        # Unit tests for core numerical behavior
+|-- overall_framework.pdf     # Vector source of the method overview figure
 |-- requirements.txt
 `-- Artifact_Aware_Learning_for_Tooth_and_Pulp_Segmentation_in_CBCT.pdf
 ```
