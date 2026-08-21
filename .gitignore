@@ -1,0 +1,55 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyd
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Environments and IDE settings
+.venv/
+venv/
+env/
+.idea/
+.vscode/
+*.code-workspace
+
+# Data and generated metadata
+Dataset/
+data/
+work/
+prepared/
+dataset_info.json
+split.json
+*.nii
+*.nii.gz
+*.npz
+
+# Experiments and model artifacts
+logs/
+outputs/
+predictions/
+runs/
+checkpoints/
+*.pt
+*.pth
+*.ckpt
+*.onnx
+*.zip
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+*.log
+
+# Local/internal method notes (not part of the public repository)
+project方法说明_中文版.md
+方案说明.md
+
+# Operating systems
+.DS_Store
+Thumbs.db
+desktop.ini

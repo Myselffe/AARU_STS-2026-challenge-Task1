@@ -1,0 +1,8 @@
+# PyTorch is intentionally omitted. Install the official wheel matching the
+# training machine's CUDA runtime first, and do not let this file replace it.
+numpy>=1.26,<3
+scipy>=1.11,<2
+nibabel>=5.2,<6
+SimpleITK>=2.3,<3
+PyYAML>=6.0.1,<7
+tqdm>=4.66,<5

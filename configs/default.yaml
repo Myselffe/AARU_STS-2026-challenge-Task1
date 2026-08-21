@@ -1,0 +1,123 @@
+# Project Main: artifact-aware semi-supervised 3-D CBCT segmentation
+# All paths are resolved from the directory in which a script is launched.
+data:
+  dataset_root: ../Dataset
+  work_dir: ./work
+  target_spacing: auto
+  validation_fraction: 0.2
+  split_seed: 2026
+  # Full CBCT arrays expand substantially after NPZ decompression. Each loader
+  # worker owns a separate cache, so keep this conservative.
+  cache_size: 1
+  # Official evaluation gives files containing "with-artifacts" twice the case weight.
+  artifact_case_sampling_weight: 2.0
+
+model:
+  # raw CBCT + differentiable suppression view + artifact proxy mask
+  in_channels: 3
+  channels: [24, 48, 96, 160, 224]
+  residual_blocks: [1, 2, 2, 2, 2]
+  deep_supervision: true
+  axial_context: true
+  boundary_head: true
+
+pretrain:
+  enabled: true
+  steps: 12000
+  learning_rate: 0.0002
+  checkpoint_every: 1000
+  cube_mask_probability: 0.35
+  downsample_probability: 0.35
+
+train:
+  device: cuda
+  seed: 2026
+  patch_size: [96, 192, 192]
+  batch_size: 1
+  num_workers: 2
+  prefetch_factor: 1
+  steps: 60000
+  validate_every: 1000
+  full_volume_validate_every: 5000
+  checkpoint_every: 2000
+  learning_rate: 0.0002
+  weight_decay: 0.00001
+  grad_clip_norm: 5.0
+  # Abort quickly instead of spending tens of thousands of steps after NaN/Inf.
+  nonfinite_abort_patience: 3
+  # AMP overflows are recoverable: GradScaler lowers its scale after a skipped
+  # update.  Allow it to recover while still aborting persistent instability.
+  amp_gradient_overflow_patience: 20
+  amp: true
+  # BF16 keeps FP16 memory savings but has the FP32 exponent range. This avoids
+  # the activation overflow observed near step 15.8k.
+  amp_dtype: bfloat16
+  fp32_retry_on_nonfinite: true
+  foreground_probability: 0.72
+  rare_class_probability: 0.45
+  artifact_patch_probability: 0.25
+  informative_unlabeled_probability: 0.80
+  validation_patches: 96
+  early_stop_patience: 8
+
+loss:
+  dice_weight: 1.0
+  ce_weight: 1.0
+  foreground_dice_weight: 0.25
+  boundary_weight: 0.10
+  topology_weight: 0.12
+  topology_iterations: 3
+  # Raw STSR label ids. Missing ids are ignored safely.
+  tubular_raw_labels: [2, 4, 5, 6, 7, 8, 9]
+  auxiliary_weights: [0.25, 0.125]
+  restoration_weight: 0.10
+  metal_restoration_multiplier: 3.0
+  # "auto" uses inverse square-root frequency with clipping.
+  class_weights: auto
+  class_weight_clip: [0.5, 5.0]
+
+semi_supervised:
+  enabled: true
+  # The failed run became unstable while an aggressive SSL ramp was rising.
+  # Let the supervised model establish foreground predictions first.
+  start_fraction: 0.25
+  ramp_fraction: 0.25
+  consistency_weight: 0.50
+  pseudo_weight: 0.10
+  # Background must be very certain; rare foreground gets a lower threshold.
+  background_threshold: 0.97
+  foreground_threshold: 0.72
+  tubular_threshold: 0.62
+  confidence_power: 2.0
+  max_normalized_entropy: 0.55
+  foreground_unsupervised_weight: 2.0
+  background_unsupervised_weight: 0.10
+  minimum_foreground_pseudo_voxels: 32
+  max_background_to_foreground_ratio: 4.0
+  ema_decay: 0.995
+  feature_perturb_probability: 0.35
+  feature_keep_range: [0.70, 0.90]
+  feature_noise: 0.10
+
+augmentation:
+  artifact_probability: 0.50
+  max_artifacts: 3
+  streaks_per_artifact: [4, 9]
+  artifact_consistency_weight: 0.20
+  artifact_consistency_probability: 0.50
+  noise_std: 0.04
+  contrast_range: [0.80, 1.20]
+  brightness_range: [-0.15, 0.15]
+  gamma_range: [0.70, 1.50]
+  blur_probability: 0.20
+  low_resolution_probability: 0.25
+
+inference:
+  patch_size: [96, 192, 192]
+  overlap: 0.5
+  amp: true
+  amp_dtype: bfloat16
+  # Safe default: only delete tiny numerical islands, never whole small roots.
+  min_component_voxels: 8
+  preserve_raw_labels: [2, 4, 5, 6, 7, 8, 9]
+  tta_axes: []
